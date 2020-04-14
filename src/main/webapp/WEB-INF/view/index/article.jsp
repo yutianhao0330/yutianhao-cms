@@ -8,6 +8,8 @@
 <meta charset="UTF-8">
 <!-- 视窗 -->
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<!-- 方便搜索引擎检索 -->
+<meta name="keywords" content="${article.keywords}">
 <title>${article.title}</title>
 </head>
 <link rel="stylesheet" href="/resource/css/bootstrap.min.css">
@@ -23,7 +25,7 @@
 				<div class="float-sm-right">
 					<c:if test="${sessionScope.user==null}">
 						<button class="btn btn-link btn-sm text-decoration-none"
-							data-toggle="modal" data-target="#register" onclick="toLogin()">
+							data-toggle="modal" data-target="#register" id="loginButton" onclick="toLogin()">
 							<font color="white">登录</font>
 						</button>
 						<button class="btn btn-link btn-sm text-decoration-none"
@@ -75,8 +77,55 @@
 					<fmt:formatDate value="${article.created}" pattern="yyyy-MM-dd HH:mm:ss"/>
 				</p>
 				<p>
-					${article.content}
+					<c:if test="${article.contentType==0}">
+						${article.content}
+					</c:if>
+					<c:if test="${article.contentType==2}">
+						<jsp:include page="/WEB-INF/view/index/picarticle.jsp"/>
+					</c:if>
 				</p>
+				<hr>
+				<p align="right">
+					<c:if test="${requestScope.isCollected}">
+						<a href="javascript:discollect(${sessionScope.user.id},${article.id})">★&nbsp;取消收藏</a>
+					</c:if>
+					<c:if test="${not requestScope.isCollected}">
+						<c:if test="${empty sessionScope.user}">
+							<a href="javascript:alertlogin()">☆&nbsp;收藏</a>
+						</c:if>
+						<c:if test="${not empty sessionScope.user}">
+							<a href="javascript:collect(${sessionScope.user.id},${article.id})">☆&nbsp;收藏</a>
+						</c:if>
+					</c:if>
+				</p>
+				<p>
+					<c:if test="${empty sessionScope.user}">
+						请<a href="javascript:alertlogin()">登录</a>后发表评论
+					</c:if>
+					<c:if test="${not empty sessionScope.user}">
+						<textarea rows="5" cols="113" placeholder="发布评论" id="contentInfo"></textarea>
+						<input type="button" class="btn btn-info" value="评论" onclick="comment(${sessionScope.user.id},${article.id})">
+					</c:if>
+				</p>
+				<hr>
+				<c:if test="${article.commentNum==0}">
+					<h5>暂无评论</h5>
+				</c:if>
+				<c:if test="${article.commentNum>0}">
+					<h5 id="commentPosition">共${article.commentNum}条评论</h5>
+					<c:forEach items="${commentList}" var="comment">
+						<b>
+							${comment.user.username}&nbsp;&nbsp;
+							<fmt:formatDate value="${comment.created}" pattern="yyyy-MM-dd HH:mm:ss"/>
+						</b>
+						<br>
+						${comment.content}
+						<hr>
+					</c:forEach>
+					<jsp:include page="/WEB-INF/view/common/pages.jsp"/>
+				</c:if>
+				
+				
 			</div>
 			<!-- 右侧边栏 -->
 			<div class="col-md-3">
@@ -146,6 +195,56 @@
 				}
 			}
 		})
+	}
+	$("#register").on("hide.bs.modal",function(){
+		location.reload();
+	})
+	function discollect(userId,articleId){
+		$.get("/discollect",{"userId":userId,"articleId":articleId},function(success){
+			if(success){
+				location.reload();
+			}else{
+				alert("操作失败!");
+			}
+		})
+	}
+	function alertlogin(){
+		$("#loginButton").trigger("click");
+	}
+	function collect(userId,articleId){
+		var url = location.href;
+		//去除可能的锚点
+		var index = url.indexOf("#");
+		if(index!=-1){
+			url = url.substring(0,index);
+		}
+		var text = '${article.title}';
+		$.post("/collect",{"userId":userId,"articleId":articleId,"text":text,"url":url},function(result){
+			if(result.code==200){
+				location.reload();
+			}else{
+				alert(result.msg);
+			}
+		})
+	}
+	function comment(userId,articleId){
+		var content = $("#contentInfo").val().trim();
+		if(comment){
+			$.post("/comment",{"userId":userId,"articleId":articleId,"content":content},function(result){
+				if(result.code==200){
+					alert("评论成功!");
+					location.reload();
+				}else{
+					alert(result.msg);
+				}
+			})
+		}else{
+			alert("评论不能为空!");
+		}
+	}
+	function page(pageNum){
+		var id = "${article.id}";
+		location.href="/detail?id="+id+"&pageNum="+pageNum+"#commentPosition";
 	}
 </script>
 </html>

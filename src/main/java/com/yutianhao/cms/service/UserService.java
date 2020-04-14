@@ -73,4 +73,14 @@ public interface UserService {
 	    * @throws
 	 */
 	User login(User user);
+	/**
+	 * 
+	    * @Title: adminLogin
+	    * @Description: 管理员登录
+	    * @param @param user
+	    * @param @return    参数
+	    * @return User    返回类型
+	    * @throws
+	 */
+	User adminLogin(User user);
 }

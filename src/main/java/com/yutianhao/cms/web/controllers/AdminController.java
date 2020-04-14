@@ -3,6 +3,7 @@ package com.yutianhao.cms.web.controllers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -63,6 +64,20 @@ public class AdminController {
 		model.addAttribute("pageSize", pageSize);
 		model.addAttribute("article", article);
 		return "admin/articles";
+	}
+	/**
+	 * 
+	    * @Title: getArticle
+	    * @Description: 根据id获得文章信息
+	    * @param @param id
+	    * @param @return    参数
+	    * @return Article    返回类型
+	    * @throws
+	 */
+	@GetMapping("article")
+	@ResponseBody
+	public Article getArticle(Integer id) {
+		return articleService.getById(id);
 	}
 	/**
 	 * 

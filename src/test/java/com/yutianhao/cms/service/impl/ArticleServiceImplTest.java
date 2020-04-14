@@ -8,6 +8,10 @@ import javax.annotation.Resource;
 import org.junit.Test;
 
 import com.github.pagehelper.PageInfo;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import com.yutianhao.cms.domain.Article;
 import com.yutianhao.cms.service.ArticleService;
 
@@ -42,5 +46,13 @@ public class ArticleServiceImplTest extends SpringJunit{
 			System.out.println(article);
 		}
 	}
-
+	@Test
+	public void testGson() {
+		Gson gson = new Gson();
+		//gson.toJson(src);
+		JsonArray jsonArray = new JsonParser().parse("asd").getAsJsonArray();
+		for (JsonElement jsonElement : jsonArray) {
+			Article article = gson.fromJson(jsonElement, Article.class);
+		}
+	}
 }

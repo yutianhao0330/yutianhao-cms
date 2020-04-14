@@ -8,7 +8,7 @@
 <meta charset="UTF-8">
 <!-- 视窗 -->
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>用户登录</title>
+<title>管理员登录</title>
 </head>
 <link rel="stylesheet" href="/resource/css/jquery/screen.css">
 <link rel="stylesheet" href="/resource/css/bootstrap.min.css">
@@ -17,15 +17,17 @@
 <script type="text/javascript" src="/resource/js/bootstrap.min.js"></script>
 <body>
 	<div class="container">
+		<h1>管理员登录</h1>
+		<hr>
 		<form id="form1">
 			<font color="red" size="5">${requestScope.msg}</font>
 			<div class="form-group">
 				<label for="username">用户名</label> 
-				<input type="text" name="username" class="form-control" id="username"> 
+				<input type="text" name="username" class="form-control w-50" id="username"> 
 			</div>
 			<div class="form-group">
 				<label for="password">密码</label> 
-				<input type="password" name="password" class="form-control" id="password"> 
+				<input type="password" name="password" class="form-control w-50" id="password"> 
 			</div>
 			<div class="form-group">
 				<button class="btn btn-info" type="submit">登录</button>
@@ -36,42 +38,37 @@
 	</div>
 </body>
 <script type="text/javascript">
-	jQuery.validator.setDefaults({
-		errorPlacement: function(error, element) {
-		//把错误信息放到其父节点后面
-		error.appendTo(element.parent());
-	}});
-	$(function(){
-		$("#form1").validate({
-			//定义校验规则
-			rules:{
-				username:{
-					required:true,
-				},
-				password:{
-					required:true,
-				},
+$(function(){
+	$("#form1").validate({
+		//定义校验规则
+		rules:{
+			username:{
+				required:true,
 			},
-			//不满足规则的消息提示
-			messages:{
-				username:{
-					required:"用户名不能为空",
-				},
-				password:{
-					required:"密码不能为空",
-				},
+			password:{
+				required:true,
 			},
-			submitHandler:function(){
-				$.post("/passport/login",$("#form1").serialize(),function(result){
-					if(result.code==200){//登录成功
-						location.reload();
-					}else{//登陆失败
-						$("#msg").text(result.msg);
-					}
-				})
-			}
-			
-		})
+		},
+		//不满足规则的消息提示
+		messages:{
+			username:{
+				required:"用户名不能为空",
+			},
+			password:{
+				required:"密码不能为空",
+			},
+		},
+		submitHandler:function(){
+			$.post("/passport/admin/login",$("#form1").serialize(),function(result){
+				if(result.code==200){//登录成功
+					location.href="/admin";
+				}else{//登陆失败
+					$("#msg").text(result.msg);
+				}
+			})
+		}
+		
 	})
+})
 </script>
 </html>

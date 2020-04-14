@@ -34,8 +34,9 @@
 				  	  我的文章
 				  </a>
 				  <a href="#" url="/my/publish" class="list-group-item list-group-item-warning ">发布文章</a>
-				  <a href="#" class="list-group-item list-group-item-warning ">我的收藏</a>
-				  <a href="#" class="list-group-item list-group-item-warning ">我的评论</a>
+				  <a href="#" url="/my/publishpic" class="list-group-item list-group-item-warning ">发布图文</a>
+				  <a href="#" url="/my/collects" class="list-group-item list-group-item-warning ">我的收藏</a>
+				  <a href="#" url="/my/comments" class="list-group-item list-group-item-warning ">我的评论</a>
 				  <a href="#" url="/my/detail" class="list-group-item list-group-item-warning ">个人设置</a>
 				</div>
 			</div>

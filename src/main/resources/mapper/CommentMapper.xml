@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+   PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+     "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yutianhao.cms.dao.CommentMapper">
+	<insert id="insert" useGeneratedKeys="true" keyProperty="id">
+		insert into cms_comment 
+		set articleId=#{articleId},userId=#{userId},
+		content=#{content},created=#{created} 
+	</insert>
+	
+	<resultMap type="Comment" id="commentResultMap" autoMapping="true">
+		<id property="id" column="id"/>
+		<association property="user" javaType="User" select="getUserById" column="userId"/>
+		<association property="article" javaType="Article" select="getArticleById" column="articleId"/>
+	</resultMap>
+	<select id="getUserById" resultType="User">
+		select * from cms_user where id=#{userId} 
+	</select>
+	<select id="getArticleById" resultType="Article">
+		select * from cms_article where id=#{articleId} 
+	</select>
+	
+	<select id="getCommentsByArticleId" resultMap="commentResultMap">
+		select * from cms_comment where articleId=#{articleId} order by created desc 
+	</select>
+	
+	<select id="getCommentsByUserId" resultMap="commentResultMap">
+		select * from cms_comment where userId=#{userId} order by created desc 
+	</select>
+	
+	<delete id="deleteComment">
+		delete from cms_comment where id=#{id} 
+	</delete>
+	
+	<update id="increaseCommentNum">
+		update cms_article set comment_num=comment_num+#{num} where id=#{articleId} 
+	</update>
+</mapper>

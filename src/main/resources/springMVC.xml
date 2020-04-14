@@ -13,7 +13,8 @@
 		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.1.xsd">
 
 	<context:component-scan base-package="com.yutianhao.cms.web.controllers"></context:component-scan>
-
+	<context:property-placeholder location="classpath:cms.properties"/>
+	
 	<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
 		<property name="prefix" value="/WEB-INF/view/"></property>
 		<property name="suffix" value=".jsp"></property>
@@ -29,17 +30,21 @@
 		<property name="maxUploadSizePerFile" value="5242880"></property>
 		<property name="defaultEncoding" value="utf8"></property>
 	</bean>
-	<!--
+	
 	<mvc:interceptors>
 		<mvc:interceptor>
-			<mvc:mapping path="/**"/>
-			<mvc:exclude-mapping path="/**/*.js"/>
-			<mvc:exclude-mapping path="/**/*.css"/>
-			<mvc:exclude-mapping path="/**/*.jpg"/>
-			<bean class="com.thyu.interceptor.LoginInterceptor"/>
+			<mvc:mapping path="/my/**"/>
+			<mvc:exclude-mapping path="/resource/**"/>
+			<bean class="com.yutianhao.cms.util.MyInrterceptor"/>
+		</mvc:interceptor>
+		
+		<mvc:interceptor>
+			<mvc:mapping path="/admin/**"/>
+			<mvc:exclude-mapping path="/resource/**"/>
+			<bean class="com.yutianhao.cms.util.AdminInterceptor"/>
 		</mvc:interceptor>
 	</mvc:interceptors>
-	-->
+	
 
 	
 	

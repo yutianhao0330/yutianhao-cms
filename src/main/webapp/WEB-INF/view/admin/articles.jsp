@@ -136,11 +136,27 @@
 		$("#author").empty();
 		$("#created").empty();
 		$("#content").empty();
-		$.get("/my/article",{"id":id},function(article){
+		$.get("/admin/article",{"id":id},function(article){
 			$("#articleTitle").append(article.title);
 			$("#author").append(article.user.username);
 			$("#created").append(new Date(article.created).toLocaleString());
-			$("#content").append(article.content);
+			//普通类文章
+			if(article.contentType==0){
+				$("#content").append(article.content);
+			}
+			//投票类文章待完善
+			if(article.contentType==1){
+				$("#content").append(article.content);
+			}
+			//图文类文章
+			if(article.contentType==2){
+				var contents = JSON.parse(article.content);
+				$(contents).each(function(index,piccontent){
+					var html = "<img src=/pic/pics/"+piccontent.src+"><br>";
+					html += piccontent.info+"<br>";
+					$("#content").append(html);
+				})
+			}
 			if(article.status==1){
 				$("input#fail").show();
 				$("input#success").hide();

@@ -19,6 +19,12 @@
 			<div class="col-md-12" style="height:70px">
 				<img class="rounded-circle" src="/resource/images/logo.png" style="width:70px;height:70px;margin-right:20px">
 				<font color="white" size="5">管理员中心</font>
+				<c:if test="${sessionScope.admin!=null}">
+					<font color="white" style="float: right" class="mr-5 mt-2">
+						当前管理员:${sessionScope.admin.username}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+						<a onclick="logout()" style="text-decoration: none" href="#"><font color="white">注销</font></a>
+					</font>
+				</c:if>
 			</div>
 		</div>
 		<div class="row" style="height:650px;padding-top:5px">
@@ -48,5 +54,17 @@
 			$("#center").load(url);
 		})
 	})
+	function logout(){
+		$.ajax({
+			url:"/passport/logout",
+			success:function(success){
+				if(success){
+					location.reload();
+				}else{
+					alert("异常错误!");
+				}
+			}
+		})
+	}
 </script>
 </html>

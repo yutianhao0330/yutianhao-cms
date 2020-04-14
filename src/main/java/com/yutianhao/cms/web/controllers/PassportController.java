@@ -77,7 +77,7 @@ public class PassportController {
 	/**
 	 * 
 	    * @Title: login
-	    * @Description: 去登陆页面
+	    * @Description: 注册用户去登陆页面
 	    * @param @return    参数
 	    * @return String    返回类型
 	    * @throws
@@ -86,6 +86,16 @@ public class PassportController {
 	public String login() {
 		return "passport/login";
 	}
+	/**
+	 * 
+	    * @Title: login
+	    * @Description: 注册用户登录
+	    * @param @param user
+	    * @param @param session
+	    * @param @return    参数
+	    * @return CMSResult<User>    返回类型
+	    * @throws
+	 */
 	@PostMapping("login")
 	@ResponseBody
 	public CMSResult<User> login(User user,HttpSession session){
@@ -122,5 +132,49 @@ public class PassportController {
 	public boolean logout(HttpSession session) {
 		session.invalidate();
 		return true;
+	}
+	/**
+	 * 
+	    * @Title: loginAdmin
+	    * @Description: 跳转到管理员登录页面
+	    * @param @return    参数
+	    * @return String    返回类型
+	    * @throws
+	 */
+	@GetMapping("admin/login")
+	public String loginAdmin() {
+		return "passport/login_admin";
+	}
+	/**
+	 * 
+	    * @Title: adminLogin
+	    * @Description: TODO(这里用一句话描述这个方法的作用)
+	    * @param @param user
+	    * @param @param session
+	    * @param @return    参数
+	    * @return CMSResult<User>    返回类型
+	    * @throws
+	 */
+	@PostMapping("admin/login")
+	@ResponseBody
+	public CMSResult<User> adminLogin(User user,HttpSession session){
+		CMSResult<User> result = new CMSResult<User>();
+		try {
+			User u = userService.adminLogin(user);
+			result.setCode(200);
+			result.setMsg("登录成功");
+			//放session
+			session.setAttribute("admin", u);
+		} catch (CMSException e) {
+			// 捕获自定义异常
+			e.printStackTrace();
+			result.setCode(500);//错误码
+			result.setMsg(e.getMessage());//错误消息
+		} catch(Exception e) {
+			e.printStackTrace();
+			result.setCode(505);//错误码
+			result.setMsg("未知错误，请联系管理员");//错误消息
+		}
+		return result;
 	}
 }

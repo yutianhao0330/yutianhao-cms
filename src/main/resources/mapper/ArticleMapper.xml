@@ -11,6 +11,8 @@
 		<result column="channel_id" property="channelId"/>
 		<result column="category_id" property="categoryId"/>
 		<result column="user_id" property="userId"/>
+		<result column="comment_num" property="commentNum"/>
+		<result column="comment_type" property="commentType"/>
 		<association property="channel" javaType="Channel" select="getChannelById" column="channel_id"/>
 		<association property="category" javaType="Category" select="getCategoryById" column="category_id"/>
 		<association property="user" javaType="User" select="getUserById" column="user_id"/>		
@@ -52,11 +54,14 @@
 			<if test="contentType!=null">
 				and content_type=#{contentType}
 			</if>
+			<if test="contentType==null">
+				and content_type!=1 
+			</if>
     	</where>
     	order by created desc 
   </select>
    <!-- 增加文章 -->
-   <insert id="insert">
+   <insert id="insert" useGeneratedKeys="true" keyProperty="id">
      insert into cms_article 
      <set>
      	<if test="title!=null and title!=''">

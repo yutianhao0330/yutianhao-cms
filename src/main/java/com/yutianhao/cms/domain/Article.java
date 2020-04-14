@@ -173,16 +173,22 @@ public class Article implements Serializable {
 	}
 	public void setCommentNum(Integer commentNum) {
 		this.commentNum = commentNum;
+		
+	}
+	public static long getSerialversionuid() {
+		return serialVersionUID;
 	}
 	@Override
 	public String toString() {
-		return "Article [id=" + id + ", title=" + title + ", summary=" + summary + ", picture=" + picture
-				+ ", channelId=" + channelId + ", categoryId=" + categoryId + ", userId=" + userId + ", hits=" + hits
-				+ ", hot=" + hot + ", status=" + status + ", deleted=" + deleted + ", created=" + created + ", updated="
-				+ updated + ", contentType=" + contentType + ", channel=" + channel + ", category=" + category
-				+ ", user=" + user + ", keywords=" + keywords + ", original=" + original + ", commentNum=" + commentNum
-				+ "]";
+		return "Article [id=" + id + ", title=" + title + ", summary=" + summary + ", content=" + content + ", picture="
+				+ picture + ", channelId=" + channelId + ", categoryId=" + categoryId + ", userId=" + userId + ", hits="
+				+ hits + ", hot=" + hot + ", status=" + status + ", deleted=" + deleted + ", created=" + created
+				+ ", updated=" + updated + ", contentType=" + contentType + ", channel=" + channel + ", category="
+				+ category + ", user=" + user + ", keywords=" + keywords + ", original=" + original + ", commentNum="
+				+ commentNum + "]";
 	}
+	
+	
 	
 	
 }

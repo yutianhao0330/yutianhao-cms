@@ -66,7 +66,11 @@
 						url:"/passport/checkUserName",
 						type:"post",
 						dataType:"json",
-						data:{username: function(){return $("#username").val();}}
+						data:{
+							username: function(){
+								return $("#username").val();
+							}
+						}
 					}
 				},
 				password:{

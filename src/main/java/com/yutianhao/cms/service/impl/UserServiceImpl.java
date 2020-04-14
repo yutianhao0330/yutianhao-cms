@@ -99,6 +99,26 @@ public class UserServiceImpl implements UserService{
 		if(null==loginUser || !MD5Util.encode(user.getPassword()).equals(loginUser.getPassword())) {
 			throw new CMSException("用户名或密码错误!");
 		}
+		if(loginUser.getLocked()==1) {
+			throw new CMSException("已被封禁，请联系管理员!");
+		}
+		return loginUser;
+	}
+
+	@Override
+	public User adminLogin(User user) {
+		// 用户名不能为空
+		if (!StringUtil.hasText(user.getUsername())) {
+			throw new CMSException("用户名不能为空");
+		}
+		// 密码不能为空
+		if (!StringUtil.hasText(user.getPassword())) {
+			throw new CMSException("密码不能为空");
+		}
+		User loginUser = userMapper.getUserByName(user.getUsername());
+		if(null==loginUser || loginUser.getRole()==0 || !MD5Util.encode(user.getPassword()).equals(loginUser.getPassword())) {
+			throw new CMSException("用户名或密码错误!");
+		}
 		return loginUser;
 	}
 	

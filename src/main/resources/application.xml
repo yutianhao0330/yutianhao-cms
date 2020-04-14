@@ -17,7 +17,6 @@
 			expression="org.springframework.stereotype.Controller" />
 	</context:component-scan>
 	<context:property-placeholder location="classpath:db.properties"/>
-
 	<bean id="dataSource" 
 		class="com.alibaba.druid.pool.DruidDataSource">
 		<property name="driverClassName" value="${jdbc.driver}">
