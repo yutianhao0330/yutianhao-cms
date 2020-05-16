@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+   PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+     "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yutianhao.cms.dao.CollectMapper">
+	<insert id="insert" useGeneratedKeys="true" keyProperty="id">
+		insert into cms_collect 
+		set text=#{text},url=#{url},
+		user_id=#{userId},article_id=#{articleId},
+		created=#{created} 
+	</insert>
+	
+	<resultMap type="Collect" id="collectResultMap" autoMapping="true">
+		<id property="id" column="id"/>
+		<result property="userId" column="user_id"/>
+		<result property="articleId" column="article_id"/>
+		<association property="user" javaType="User" select="getUserById" column="user_id"/>
+		<association property="article" javaType="Article" select="getArticleById" column="article_id"/>
+	</resultMap>
+	<select id="getCollectsByUserId" resultMap="collectResultMap">
+		select * from cms_collect where user_id=#{userId} order by created desc 
+	</select>
+	<select id="getUserById" resultType="User">
+		select * from cms_user where id=#{user_id} 
+	</select>
+	<select id="getArticleById" resultType="Article">
+		select * from cms_article where id=#{article_id} 
+	</select>
+	
+	<delete id="deleteCollectById">
+		delete from cms_collect where id=#{id} 
+	</delete>
+	
+	<delete id="deleteCollectByUAId">
+		delete from cms_collect where user_id=#{userId} and article_id=#{articleId} 
+	</delete>
+	
+	<select id="isCollected" resultType="int">
+		select count(*) from cms_collect where user_id=#{userId} and article_id=#{articleId} 
+	</select>
+</mapper>

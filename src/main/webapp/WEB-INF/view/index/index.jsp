@@ -183,6 +183,19 @@
 			</div>
 			<!-- 右边显示最新的五条文章 -->
 			<div class="col-md-3">
+				<!-- 搜索框区域 -->
+				<form action="/search" method="get">
+					<div class="input-group mb-3">
+						<input type="text" name="key" value="${key}" class="form-control"
+							placeholder="请输入要搜索的内容" aria-label="Recipient's username"
+							aria-describedby="button-addon2">
+						<div class="input-group-append">
+							<button class="btn btn-outline-secondary" id="button-addon2">搜索</button>
+						</div>
+					</div>
+				</form>
+				
+				
 				<div class="card" style="width: 18rem;" id="right">
 					<div class="card-header">
 						<b>24小时热闻</b>
@@ -276,9 +289,15 @@
 		});
 	})
 	function page(pageNum) {
+		var key = "${key}";
 		var channelId = "${article.channelId}";
 		var categoryId = "${article.categoryId}";
-		var url = "/?pageNum=" + pageNum;
+		var url;
+		if(key){
+			url = "/search?key="+key+"&pageNum="+pageNum;
+		}else{
+			url = "/?pageNum=" + pageNum;
+		}
 		if (channelId) {
 			url += "&channelId=" + channelId;
 		}

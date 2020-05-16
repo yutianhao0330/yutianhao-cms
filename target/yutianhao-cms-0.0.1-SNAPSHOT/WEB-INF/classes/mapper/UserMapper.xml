@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+   PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+     "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yutianhao.cms.dao.UserMapper">
+	<select id="getUserList" resultType="User">
+		select * from cms_user 
+		<where>
+			<if test="username!=null and username!=''">
+				and username like concat('%',#{username},'%') 
+			</if>
+			<if test="locked!=null and locked!=2">
+				and locked=#{locked} 
+			</if>
+		</where>
+		order by role desc
+	</select>
+	
+	<update id="updateUser">
+		update cms_user 
+		<set>
+			<if test="username!=null and username!=''">
+				username=#{username},
+			</if>
+			<if test="password!=null and password!=''">
+				password=#{password},
+			</if>
+			<if test="nickname!=null and nickname!=''">
+				nickname=#{nickname},
+			</if>
+			<if test="birthday!=null">
+				birthday=#{birthday},
+			</if>
+			<if test="gender!=null">
+				gender=#{gender},
+			</if>
+			<if test="locked!=null">
+				locked=#{locked},
+			</if>
+			<if test="updated!=null">
+				updated=#{updated},
+			</if>
+			<if test="role!=null">
+				role=#{role},
+			</if>
+		</set>
+		 where id=#{id} 
+	</update>
+	
+	
+	<select id="getUserById" resultType="User">
+		select * from cms_user where id=#{id} 
+	</select>
+	
+	<select id="getUserByName" resultType="User">
+		select * from cms_user where username=#{username} 
+	</select>
+	
+	<insert id="insert" useGeneratedKeys="true" keyProperty="id">
+		insert into cms_user 
+		<set>
+			<if test="username!=null and username!=''">
+				username=#{username},
+			</if>
+			<if test="password!=null and password!=''">
+				password=#{password},
+			</if>
+			<if test="nickname!=null and nickname!=''">
+				nickname=#{nickname},
+			</if>
+			<if test="birthday!=null">
+				birthday=#{birthday},
+			</if>
+			<if test="gender!=null">
+				gender=#{gender},
+			</if>
+			<if test="locked!=null">
+				locked=#{locked},
+			</if>
+			<if test="updated!=null">
+				updated=#{updated},
+			</if>
+			<if test="role!=null">
+				role=#{role},
+			</if>
+			<if test="created!=null">
+				created=#{created}, 
+			</if>
+		</set>
+	</insert>
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+</mapper>

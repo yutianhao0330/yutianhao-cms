@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import com.github.pagehelper.PageInfo;
 import com.yutianhao.cms.domain.Article;
 import com.yutianhao.cms.domain.User;
+import com.yutianhao.cms.repository.ArticleRepository;
 import com.yutianhao.cms.service.ArticleService;
 import com.yutianhao.cms.service.UserService;
 /**
@@ -28,6 +29,10 @@ public class AdminController {
 	private ArticleService articleService;
 	@Autowired
 	private UserService userService;
+	@Autowired
+	private ArticleRepository articleRepository;
+	//@Autowired
+	//private ArticleRepository articleRepository;
 	/**
 	 * 
 	    * @Title: index
@@ -82,7 +87,7 @@ public class AdminController {
 	/**
 	 * 
 	    * @Title: update
-	    * @Description: 更新文章的方法
+	    * @Description: 更新文章的方法,审核文章，改变文章热门信息
 	    * @param @param article
 	    * @param @return    参数
 	    * @return boolean    返回类型
@@ -91,7 +96,16 @@ public class AdminController {
 	@RequestMapping("update")
 	@ResponseBody
 	public boolean update(Article article) {
-		return articleService.update(article);
+		boolean success = articleService.update(article);
+		//同步es里的数据
+		Article newArticle = articleService.getById(article.getId());
+		if(newArticle.getStatus()!=1 || newArticle.getDeleted()==1) {
+			articleRepository.deleteById(article.getId());
+		}else {
+			articleRepository.save(newArticle);
+		}
+		
+		return success;
 	}
 	/**
 	 * 

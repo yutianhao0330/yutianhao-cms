@@ -1,15 +1,23 @@
 package com.yutianhao.cms.web.controllers;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import org.elasticsearch.action.search.SearchAction;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.elasticsearch.core.ElasticsearchTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +35,7 @@ import com.yutianhao.cms.domain.Category;
 import com.yutianhao.cms.domain.Channel;
 import com.yutianhao.cms.domain.Collect;
 import com.yutianhao.cms.domain.Comment;
+import com.yutianhao.cms.domain.Slide;
 import com.yutianhao.cms.domain.User;
 import com.yutianhao.cms.enums.ArticleEnum;
 import com.yutianhao.cms.service.ArticleService;
@@ -38,6 +47,7 @@ import com.yutianhao.cms.service.SlideService;
 import com.yutianhao.cms.service.UserService;
 import com.yutianhao.cms.util.CMSException;
 import com.yutianhao.cms.util.CMSResult;
+import com.yutianhao.cms.util.HLUtils;
 import com.yutianhao.cms.vo.ArticlePicVO;
 /**
  * 
@@ -63,6 +73,110 @@ public class IndexController {
 	private CollectService collectService;
 	@Autowired
 	private CommentService commentService;
+	@Autowired
+	private RedisTemplate redisTemplate;
+	@Autowired
+	private ThreadPoolTaskExecutor threadPoolTaskExecutor;
+	@Autowired
+	private ElasticsearchTemplate elasticsearchTemplate;
+	
+	/**
+	 * 
+	    * @Title: search
+	    * @Description: 搜索框下从es中查询结果
+	    * @param @param key
+	    * @param @param model
+	    * @param @param pageNum
+	    * @param @param pageSize
+	    * @param @return    参数
+	    * @return String    返回类型
+	    * @throws
+	 */
+	@SuppressWarnings("unchecked")
+	@RequestMapping("search")
+	public String search(HttpServletResponse response,String key,Model model,@RequestParam(defaultValue = "1")Integer pageNum,@RequestParam(defaultValue = "4")Integer pageSize) {
+		
+		
+		//如果key是空，回到首页
+		if(null==key || key.length()==0) {
+			try {
+				response.sendRedirect("/index");
+				return null;
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		}
+		//从es中查询 
+		long start = System.currentTimeMillis();
+		PageInfo<Article> page = (PageInfo<Article>)HLUtils.findByHighLight(elasticsearchTemplate, Article.class, pageNum, pageSize, new String[]{"title"}, "id", key);
+		long end = System.currentTimeMillis();
+		System.err.println("es查询时间: "+(end-start)+"ms");
+		model.addAttribute("articleList", page.getList());
+		model.addAttribute("key", key);
+		model.addAttribute("page", page);
+		System.out.println(page);
+		
+		//用redis优化，查询栏目列表
+		List<Channel> channelList = redisTemplate.opsForList().range("channelList", 0, -1);
+		if(channelList==null || channelList.size()==0) {
+			channelList = channelService.getChannelList();
+			redisTemplate.opsForList().rightPushAll("channelList", channelList);
+		}
+		model.addAttribute("channelList", channelList);
+		
+		//右侧显示当前栏目的最新五篇文章,如果是首页面则显示所有文章的近5篇
+		Article recentArticle = new Article();
+		setAvailable(recentArticle);
+		//==================redis优化最新五篇文章,每5分钟同步一次======================
+		int recentId = 0;
+		List<Article> recentArticles = (List<Article>)redisTemplate.opsForValue().get("recentArticles"+recentId);
+		if(null==recentArticles || recentArticles.size()==0) {
+			recentArticles = articleService.getArticleList(recentArticle, 1, 5).getList();
+			redisTemplate.opsForValue().set("recentArticles"+recentId,recentArticles);
+			redisTemplate.expire("recentArticles"+recentId, 5, TimeUnit.MINUTES);
+		}
+		model.addAttribute("recentArticles",recentArticles);
+		
+		//查询最近24小时的热门文章，并在里面随机四篇，使用redis优化
+		List<Article> hot24Articles = (List<Article>)redisTemplate.opsForValue().get("hot24Articles");
+		if(null==hot24Articles) {
+			Article recent24HourHotArticle = new Article();
+			setAvailable(recent24HourHotArticle);
+			recent24HourHotArticle.setHot(1);
+			//先查询出所有热点文章
+			List<Article> hotArticles = articleService.getArticleList(recent24HourHotArticle, 1, Integer.MAX_VALUE).getList();
+			//选取最近24小时的
+			Calendar limit = Calendar.getInstance();
+			limit.add(Calendar.HOUR, -24);
+			Date limitTime = limit.getTime();
+			hot24Articles = hotArticles.stream().filter((e)->(e.getCreated().getTime()>limitTime.getTime())).collect(Collectors.toList());
+			//要显示四条，满足条件的文章数小于等于4的话，直接全部返回，否则从中随机抽取四篇
+			int size = hot24Articles.size();
+			if(size>4) {
+				int[] random = RandomUtil.subRandom(0, size-1, 4);
+				//对数组排序，保证结果是按照xml中默认的时间排序
+				Arrays.sort(random);
+				List<Article> articles24 = new ArrayList<Article>();
+				for(int i=0;i<random.length;i++) {
+					articles24.add(hot24Articles.get(random[i]));
+				}
+				model.addAttribute("hot24Articles", articles24);
+				redisTemplate.opsForValue().set("hot24Articles",articles24);
+			}else {
+				model.addAttribute("hot24Articles", hot24Articles);
+				redisTemplate.opsForValue().set("hot24Articles",hot24Articles);
+			}
+			redisTemplate.expire("hot24Articles", 5, TimeUnit.MINUTES);
+		}else {
+			model.addAttribute("hot24Articles", hot24Articles);
+		}
+		
+		
+		return "index/index";
+	}
+	
+	
 	/**
 	 * 
 	    * @Title: index
@@ -71,13 +185,19 @@ public class IndexController {
 	    * @return String    返回类型
 	    * @throws
 	 */
+	@SuppressWarnings("unchecked")
 	@RequestMapping(value = {"","/","index"})
 	public String index(Model model,Article article,@RequestParam(defaultValue = "1")Integer pageNum,@RequestParam(defaultValue = "4")Integer pageSize) {
+		long start = System.currentTimeMillis();
+		
 		//查询条件放回作用域
 		model.addAttribute("article", article);
-		
-		//查询所有的栏目
-		List<Channel> channelList = channelService.getChannelList();
+		//用redis优化，查询栏目列表
+		List<Channel> channelList = redisTemplate.opsForList().range("channelList", 0, -1);
+		if(channelList==null || channelList.size()==0) {
+			channelList = channelService.getChannelList();
+			redisTemplate.opsForList().rightPushAll("channelList", channelList);
+		}
 		model.addAttribute("channelList", channelList);
 		setAvailable(article);
 		
@@ -91,16 +211,34 @@ public class IndexController {
 			model.addAttribute("page", page);
 			model.addAttribute("articleList",page.getList());
 		}else {
-			//查询热点文章
+			
+			//查询热点文章,使用redis优化首页数据
 			Article hotArticle = new Article();
 			//查询的文章应为已发布，未删除，html类型
 			setAvailable(hotArticle);
 			hotArticle.setHot(1);
-			PageInfo<Article> page = articleService.getArticleList(hotArticle, pageNum, pageSize);
+			PageInfo<Article> page;
+			if(pageNum==1) {
+				page = (PageInfo<Article>)redisTemplate.opsForValue().get("hotArticles");
+				if(null==page || page.getList().size()==0) {
+					page = articleService.getArticleList(hotArticle, pageNum, pageSize);
+					redisTemplate.opsForValue().set("hotArticles",page);
+					redisTemplate.expire("hotArticles", 5, TimeUnit.MINUTES);
+				}
+			}else {
+				page = articleService.getArticleList(hotArticle, pageNum, pageSize);
+			}
 			model.addAttribute("page", page);
 			model.addAttribute("articleList",page.getList());
-			//查询广告
-			model.addAttribute("slideList", slideService.getSlideList());
+			
+			//查询广告,用redis优化
+			List<Slide> slideList = (List<Slide>)redisTemplate.opsForValue().get("slideList");
+			if(null==slideList || slideList.size()==0) {
+				slideList = slideService.getSlideList();
+				redisTemplate.opsForValue().set("slideList",slideList);
+				redisTemplate.expire("slideList", 5, TimeUnit.MINUTES);
+			}
+			model.addAttribute("slideList", slideList);
 		}
 		
 		//右侧显示当前栏目的最新五篇文章,如果是首页面则显示所有文章的近5篇
@@ -111,34 +249,52 @@ public class IndexController {
 			//查询栏目名称
 			model.addAttribute("channelName", channelService.getChannelById(article.getChannelId()).getName());
 		}
-		PageInfo<Article> recentArticles = articleService.getArticleList(recentArticle, 1, 5);
-		model.addAttribute("recentArticles",recentArticles.getList());
+		//==================redis优化最新五篇文章,每5分钟同步一次======================
+		int recentId = (null==article.getChannelId()?0:article.getChannelId());
+		List<Article> recentArticles = (List<Article>)redisTemplate.opsForValue().get("recentArticles"+recentId);
+		if(null==recentArticles || recentArticles.size()==0) {
+			recentArticles = articleService.getArticleList(recentArticle, 1, 5).getList();
+			redisTemplate.opsForValue().set("recentArticles"+recentId,recentArticles);
+			redisTemplate.expire("recentArticles"+recentId, 5, TimeUnit.MINUTES);
+		}
+		model.addAttribute("recentArticles",recentArticles);
 		
-		//查询最近24小时的热门文章，并在里面随机四篇
-		Article recent24HourHotArticle = new Article();
-		setAvailable(recent24HourHotArticle);
-		recent24HourHotArticle.setHot(1);
-		//先查询出所有热点文章
-		List<Article> hotArticles = articleService.getArticleList(recent24HourHotArticle, 1, Integer.MAX_VALUE).getList();
-		//选取最近24小时的
-		Calendar limit = Calendar.getInstance();
-		limit.add(Calendar.HOUR, -24);
-		Date limitTime = limit.getTime();
-		List<Article> hot24Articles = hotArticles.stream().filter((e)->(e.getCreated().getTime()>limitTime.getTime())).collect(Collectors.toList());
-		//要显示四条，满足条件的文章数小于等于4的话，直接全部返回，否则从中随机抽取四篇
-		int size = hot24Articles.size();
-		if(size>4) {
-			int[] random = RandomUtil.subRandom(0, size-1, 4);
-			//对数组排序，保证结果是按照xml中默认的时间排序
-			Arrays.sort(random);
-			List<Article> articles24 = new ArrayList<Article>();
-			for(int i=0;i<random.length;i++) {
-				articles24.add(hot24Articles.get(random[i]));
+		//查询最近24小时的热门文章，并在里面随机四篇，使用redis优化
+		List<Article> hot24Articles = (List<Article>)redisTemplate.opsForValue().get("hot24Articles");
+		if(null==hot24Articles) {
+			Article recent24HourHotArticle = new Article();
+			setAvailable(recent24HourHotArticle);
+			recent24HourHotArticle.setHot(1);
+			//先查询出所有热点文章
+			List<Article> hotArticles = articleService.getArticleList(recent24HourHotArticle, 1, Integer.MAX_VALUE).getList();
+			//选取最近24小时的
+			Calendar limit = Calendar.getInstance();
+			limit.add(Calendar.HOUR, -24);
+			Date limitTime = limit.getTime();
+			hot24Articles = hotArticles.stream().filter((e)->(e.getCreated().getTime()>limitTime.getTime())).collect(Collectors.toList());
+			//要显示四条，满足条件的文章数小于等于4的话，直接全部返回，否则从中随机抽取四篇
+			int size = hot24Articles.size();
+			if(size>4) {
+				int[] random = RandomUtil.subRandom(0, size-1, 4);
+				//对数组排序，保证结果是按照xml中默认的时间排序
+				Arrays.sort(random);
+				List<Article> articles24 = new ArrayList<Article>();
+				for(int i=0;i<random.length;i++) {
+					articles24.add(hot24Articles.get(random[i]));
+				}
+				model.addAttribute("hot24Articles", articles24);
+				redisTemplate.opsForValue().set("hot24Articles",articles24);
+			}else {
+				model.addAttribute("hot24Articles", hot24Articles);
+				redisTemplate.opsForValue().set("hot24Articles",hot24Articles);
 			}
-			model.addAttribute("hot24Articles", articles24);
+			redisTemplate.expire("hot24Articles", 5, TimeUnit.MINUTES);
 		}else {
 			model.addAttribute("hot24Articles", hot24Articles);
 		}
+		
+		long end = System.currentTimeMillis();
+		System.err.println("访问首页时间: "+(end-start)+"ms");
 		return "index/index";
 	}
 	/**
@@ -163,11 +319,29 @@ public class IndexController {
 	    * @return String    返回类型
 	    * @throws
 	 */
+	@SuppressWarnings("unchecked")
 	@RequestMapping("detail")
-	public String detail(Model model,Integer id,HttpSession session,@RequestParam(defaultValue = "1")Integer pageNum,@RequestParam(defaultValue = "5")Integer pageSize) {
+	public String detail(Model model,HttpServletRequest request,Integer id,HttpSession session,@RequestParam(defaultValue = "1")Integer pageNum,@RequestParam(defaultValue = "5")Integer pageSize) {
 		//查询文章
 		Article article = articleService.getById(id);
 		model.addAttribute("article", article);
+		//更新点击量
+		String ip = request.getRemoteAddr();
+		String key = "Hits_"+id+"_"+ip;
+		if(!redisTemplate.hasKey(key)) {
+			threadPoolTaskExecutor.execute(new Runnable() {
+				
+				@Override
+				public void run() {
+					// TODO Auto-generated method stub
+					article.setHits(article.getHits()+1);
+					articleService.update(article);
+					redisTemplate.opsForValue().set(key, "");
+					redisTemplate.expire(key, 5, TimeUnit.MINUTES);
+				}
+			});
+		}
+		
 		//获取文章的userId
 		Integer userId = article.getUserId();
 		//根据userId获取这个作者的所有文章
@@ -176,7 +350,7 @@ public class IndexController {
 		queryArticle.setUserId(userId);
 		List<Article> userArticleList = articleService.getArticleList(queryArticle, 1, Integer.MAX_VALUE).getList();
 		//过滤，选出这个作者的最近三篇文章(不包括当前这篇)
-		List<Article> articleList = userArticleList.stream().filter(e->(e.getId()!=id)).limit(3).collect(Collectors.toList());
+		List<Article> articleList = userArticleList.stream().filter(e->(e.getId()!=id.intValue())).limit(3).collect(Collectors.toList());
 		model.addAttribute("articleList", articleList);
 		//获取作者信息放入作用域
 		User user = userService.getUserById(userId);
